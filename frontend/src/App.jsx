@@ -1,10 +1,21 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Dashboard from "./pages/Dashboard";
+import CFTracker from "./pages/CFTracker";
+import GateTracker from "./pages/GateTracker";
+
 function App() {
   return (
-    <div className="w-screen h-screen flex items-center justify-center bg-gray-900">
-      <h1 className="text-5xl font-bold text-pink-500">
-        React + Tailwind is working 🚀
-      </h1>
-    </div>
+    <BrowserRouter>
+      <Navbar />
+      <div className="p-6">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/cf" element={<CFTracker />} />
+          <Route path="/gate" element={<GateTracker />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   );
 }
 
