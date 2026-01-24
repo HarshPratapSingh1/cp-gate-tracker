@@ -30,12 +30,13 @@ function CFTracker() {
                 const snap = await getDoc(ref);
 
                 if (snap.exists()) {
-                    setHistory(snap.data().history || []);
-                    setHandle(snap.data().handle || "");
+                    const data = snap.data();
+                    setHistory(data.history || []);
+                    setHandle(data.handle || "");
                 }
 
             } catch (err) {
-                console.log("History load error", err);
+                console.log("History load error:", err);
             }
         };
 
@@ -50,11 +51,16 @@ function CFTracker() {
             return;
         }
 
+        if (!handle.trim()) {
+            alert("Enter Codeforces handle");
+            return;
+        }
+
         try {
             setLoading(true);
 
             const res = await axios.get(
-                `https://codeforces.com/api/user.info?handles=${handle}`
+                `https://codeforces.com/api/user.info?handles=${handle.trim()}`
             );
 
             const userRating = res.data.result[0].rating || 0;
@@ -63,67 +69,67 @@ function CFTracker() {
 
             const ref = doc(db, "cfRatings", auth.currentUser.uid);
 
-            // Save handle
+            // Save handle safely
             await setDoc(ref, {
-                handle: handle
+                handle: handle.trim()
             }, { merge: true });
 
-            // Push rating history
-            await updateDoc(ref, {
+            // Add rating history safely
+            await setDoc(ref, {
                 history: arrayUnion({
                     rating: userRating,
                     date: new Date()
                 })
-            });
+            }, { merge: true });
 
-            // Reload updated history
-            const snap = await getDoc(ref);
-
-            if (snap.exists()) {
-                setHistory(snap.data().history || []);
-            }
-
-            setLoading(false);
+            // Update UI instantly (no extra fetch needed)
+            setHistory(prev => [
+                ...prev,
+                { rating: userRating, date: new Date() }
+            ]);
 
         } catch (error) {
             alert("Invalid Codeforces handle");
-            setLoading(false);
         }
+
+        setLoading(false);
     };
 
     return (
-        <div>
+        <div className="p-6">
+
             <h1 className="text-2xl font-bold mb-4">
                 Codeforces Tracker
             </h1>
 
-            <input
-                type="text"
-                placeholder="Enter CF handle"
-                className="border p-2 mr-2"
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-            />
+            <div className="flex items-center gap-3">
 
-            <button
-                onClick={fetchRating}
-                className="bg-blue-600 text-white px-4 py-2 rounded"
-            >
-                Fetch Rating
-            </button>
+                <input
+                    type="text"
+                    placeholder="Enter CF handle"
+                    className="border p-2 rounded"
+                    value={handle}
+                    onChange={(e) => setHandle(e.target.value)}
+                />
 
-            {loading && (
-                <p className="mt-3">Loading...</p>
-            )}
+                <button
+                    onClick={fetchRating}
+                    disabled={loading}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                    {loading ? "Fetching..." : "Fetch Rating"}
+                </button>
 
-            {rating && (
+            </div>
+
+            {rating !== null && (
                 <p className="mt-4 text-lg">
                     Current Rating: <b>{rating}</b>
                 </p>
             )}
 
             {history.length > 0 && (
-                <div className="mt-6">
+                <div className="bg-gray-900 p-6 rounded-xl mt-6 shadow-lg">
                     <RatingChart history={history} />
                 </div>
             )}
