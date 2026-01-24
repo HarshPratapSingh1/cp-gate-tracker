@@ -12,8 +12,10 @@ function RatingChart({ history }) {
 
     const data = history.map((item, index) => ({
         name: index + 1,
-        rating: item.rating
+        rating: item.rating,
+        target: 1600
     }));
+
 
     return (
         <div>
@@ -38,6 +40,14 @@ function RatingChart({ history }) {
                         dot={{ fill: "#ec4899", r: 5 }}
                         activeDot={{ r: 7 }}
                     />
+                    <Line
+                        type="monotone"
+                        dataKey="target"
+                        stroke="#ef4444"
+                        strokeDasharray="5 5"
+                        dot={false}
+                    />
+
                 </LineChart>
             </ResponsiveContainer>
         </div>

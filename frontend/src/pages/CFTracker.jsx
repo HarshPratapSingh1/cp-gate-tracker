@@ -4,7 +4,6 @@ import { db, auth } from "../firebase/config";
 import {
     doc,
     setDoc,
-    updateDoc,
     arrayUnion,
     getDoc
 } from "firebase/firestore";
@@ -17,6 +16,30 @@ function CFTracker() {
     const [rating, setRating] = useState(null);
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState([]);
+
+    // 📊 Computed Dashboard Stats
+    const currentRating =
+        history.length > 0 ? history[history.length - 1].rating : 0;
+
+    const peakRating =
+        history.length > 0
+            ? Math.max(...history.map(item => item.rating))
+            : 0;
+
+    const expertProgress =
+        currentRating > 0
+            ? Math.min((currentRating / 1600) * 100, 100).toFixed(1)
+            : 0;
+
+    // Weekly improvement calculation (last 7 entries approx)
+    let weeklyGain = 0;
+
+    if (history.length >= 2) {
+        const last = history[history.length - 1].rating;
+        const prev = history[Math.max(history.length - 8, 0)].rating;
+        weeklyGain = last - prev;
+    }
+
 
     // Load rating history on page load
     useEffect(() => {
@@ -69,12 +92,12 @@ function CFTracker() {
 
             const ref = doc(db, "cfRatings", auth.currentUser.uid);
 
-            // Save handle safely
+            // Save handle
             await setDoc(ref, {
                 handle: handle.trim()
             }, { merge: true });
 
-            // Add rating history safely
+            // Save rating history
             await setDoc(ref, {
                 history: arrayUnion({
                     rating: userRating,
@@ -82,7 +105,7 @@ function CFTracker() {
                 })
             }, { merge: true });
 
-            // Update UI instantly (no extra fetch needed)
+            // Update UI instantly
             setHistory(prev => [
                 ...prev,
                 { rating: userRating, date: new Date() }
@@ -102,6 +125,35 @@ function CFTracker() {
                 Codeforces Tracker
             </h1>
 
+            {/* 📊 DASHBOARD CARDS */}
+            <div className="grid grid-cols-4 gap-4 mb-6">
+
+                <div className="bg-blue-100 p-4 rounded shadow">
+                    <p className="text-sm">Current Rating</p>
+                    <p className="text-xl font-bold">{currentRating}</p>
+                </div>
+
+                <div className="bg-green-100 p-4 rounded shadow">
+                    <p className="text-sm">Peak Rating</p>
+                    <p className="text-xl font-bold">{peakRating}</p>
+                </div>
+
+                <div className="bg-purple-100 p-4 rounded shadow">
+                    <p className="text-sm">Expert Progress</p>
+                    <p className="text-xl font-bold">{expertProgress}%</p>
+                </div>
+                <div className="bg-yellow-100 p-4 rounded shadow">
+                    <p className="text-sm">Weekly Progress</p>
+
+                    <p className="text-xl font-bold">
+                        {weeklyGain >= 0 ? "▲ " : "▼ "}
+                        {weeklyGain}
+                    </p>
+                </div>
+
+            </div>
+
+            {/* INPUT SECTION */}
             <div className="flex items-center gap-3">
 
                 <input
@@ -128,6 +180,7 @@ function CFTracker() {
                 </p>
             )}
 
+            {/* 📈 GRAPH */}
             {history.length > 0 && (
                 <div className="bg-gray-900 p-6 rounded-xl mt-6 shadow-lg">
                     <RatingChart history={history} />
